@@ -1,1 +1,314 @@
-<p>Hello World</p>
+<!doctype html> 
+ <html lang="zh-CN"> 
+ <head> 
+   <meta charset="utf-8" /> 
+   <meta name="viewport" content="width=device-width,initial-scale=1" /> 
+   <title>点阵画图 — 首页</title> 
+   <meta name="description" content="轻量的点阵（像素）画图工具。快速开始、模板、示例画廊与使用帮助。" /> 
+   <style> 
+     :root{ 
+       --bg:#0f1724; 
+       --card:#0b1220; 
+       --accent:#22c1c3; 
+       --muted:#9aa6b2; 
+       --glass: rgba(255,255,255,0.03); 
+       --radius:14px; 
+       font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; 
+     } 
+     *{box-sizing:border-box} 
+     html,body{height:100%;margin:0;background: 
+       radial-gradient(1200px 600px at 10% 20%, rgba(34,193,195,0.06), transparent), 
+       linear-gradient(180deg,#071123 0%, #071323 100%); 
+       color:#e6eef3;font-smoothing:antialiased;} 
+     .wrap{max-width:1100px;margin:36px auto;padding:28px;display:grid;grid-template-columns:1fr 420px;gap:20px;} 
+     header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px} 
+     .brand{display:flex;gap:12px;align-items:center} 
+     .logo{ 
+       width:52px;height:52px;border-radius:10px; 
+       background:linear-gradient(135deg,var(--accent),#6a5cff); 
+       display:flex;align-items:center;justify-content:center;font-weight:700;color:#051219; 
+       box-shadow:0 6px 18px rgba(12,20,30,0.6); 
+     } 
+     h1{margin:0;font-size:20px} 
+     p.lead{margin:4px 0 0;color:var(--muted);font-size:13px} 
+     /* hero */ 
+     .hero{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:22px;border-radius:var(--radius);box-shadow:0 6px 20px rgba(0,0,0,0.45);} 
+     .hero-grid{display:flex;gap:18px;align-items:center} 
+     .hero-left{flex:1} 
+     .cta-row{margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap} 
+     .btn{padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:600} 
+     .btn-primary{background:linear-gradient(90deg,var(--accent),#6a5cff);color:#052025} 
+     .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)} 
+     .sub{font-size:13px;color:var(--muted);margin-top:8px} 
+     /* right panel (quick actions) */ 
+     .panel{background:var(--card);padding:16px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.5);} 
+     .quick-list{display:flex;flex-direction:column;gap:10px} 
+     .preset{display:flex;gap:12px;align-items:center} 
+     .thumb{width:64px;height:64px;border-radius:8px;background:var(--glass);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid rgba(255,255,255,0.02)} 
+     .preset-info{flex:1} 
+     .preset-info div{font-size:13px} 
+     .small{font-size:12px;color:var(--muted)} 
+     /* gallery */ 
+     .gallery{margin-top:18px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px} 
+     .card{background:var(--card);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:8px;align-items:center} 
+     .canvas-preview{width:140px;height:140px;border-radius:8px;overflow:hidden;background:linear-gradient(90deg,#fff,#fff);image-rendering:pixelated;display:flex;align-items:center;justify-content:center} 
+     footer{grid-column:1/-1;margin-top:18px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;align-items:center} 
+     /* responsive */ 
+     @media (max-width:980px){ 
+       .wrap{grid-template-columns:1fr;padding:18px} 
+       .brand h1{font-size:18px} 
+       .hero-grid{flex-direction:column} 
+     } 
+   </style> 
+ </head> 
+ <body> 
+   <main class="wrap"> 
+     <header> 
+      <div class="brand"> 
+        <div class="logo">LM</div>
+        <div>
+          <h1>LM点阵画图</h1>
+          <p class="lead">轻量、直观的像素画编辑器 — 适合图标、表情与像素艺术创作。</p>
+        </div>
+      </div> 
+      <nav> 
+        <button class="btn btn-ghost" id="openEditorBtn">打开画图</button> 
+        <button class="btn btn-ghost" id="openGalleryBtn">示例画廊</button> 
+      </nav> 
+     </header> 
+
+     <section class="hero"> 
+       <div class="hero-grid"> 
+         <div class="hero-left"> 
+           <h2 style="margin:0 0 8px">马上开始你的像素创作</h2> 
+           <p class="sub">选择预设或自定义网格，快速进入编辑器并开始绘制。支持导出 PNG、保存/加载 LM 与导入图片像素化。</p> 
+
+           <div class="cta-row"> 
+             <div> 
+               <label class="small" style="display:block;margin-bottom:6px">快速新建</label> 
+               <select id="presetSelect" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit"> 
+                 <option value="32x32x16">32 × 32 （图标）</option> 
+                 <option value="64x64x8">64 × 64 （细节）</option> 
+                 <option value="16x16x20">16 × 16 （头像/表情）</option> 
+                 <option value="128x128x4">128 × 128 （大尺寸）</option> 
+               </select> 
+             </div> 
+
+             <button class="btn btn-primary" id="startPreset">开始绘制</button> 
+             <button class="btn btn-ghost" id="openTutorial">查看教程</button> 
+           </div> 
+
+           <p class="sub" style="margin-top:12px">也可以把页面保存为书签，随时打开继续创作。支持触摸和桌面设备。</p> 
+         </div> 
+
+         <aside class="panel" style="width:380px;"> 
+           <h3 style="margin:0 0 8px">快速操作</h3> 
+           <div class="quick-list"> 
+             <div class="preset"> 
+               <div class="thumb" id="thumb32"></div> 
+               <div class="preset-info"> 
+                 <div><strong>32 × 32</strong></div> 
+                 <div class="small">默认图标网格</div> 
+               </div> 
+               <button class="btn btn-ghost" data-preset="32x32x16">打开</button> 
+             </div> 
+
+             <div class="preset"> 
+               <div class="thumb" id="thumb64"></div> 
+               <div class="preset-info"> 
+                 <div><strong>64 × 64</strong></div> 
+                 <div class="small">更高细节</div> 
+               </div> 
+               <button class="btn btn-ghost" data-preset="64x64x8">打开</button> 
+             </div> 
+
+             <div class="preset"> 
+               <div class="thumb" id="thumb16"></div> 
+               <div class="preset-info"> 
+                 <div><strong>16 × 16</strong></div> 
+                 <div class="small">表情 / 小图</div> 
+               </div> 
+               <button class="btn btn-ghost" data-preset="16x16x20">打开</button> 
+             </div> 
+           </div> 
+         </aside> 
+       </div> 
+
+       <div style="margin-top:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"> 
+         <div style="color:var(--muted);font-size:13px">特色：</div> 
+         <div class="small" style="background:rgba(255,255,255,0.02);padding:8px;border-radius:8px">网格自定义</div> 
+         <div class="small" style="background:rgba(255,255,255,0.02);padding:8px;border-radius:8px">撤销/重做</div> 
+         <div class="small" style="background:rgba(255,255,255,0.02);padding:8px;border-radius:8px">导出 PNG / 保存 LM</div> 
+         <div class="small" style="background:rgba(255,255,255,0.02);padding:8px;border-radius:8px">触摸与鼠标支持</div> 
+       </div> 
+     </section> 
+
+     <section style="grid-column:1/-1;margin-top:10px"> 
+       <h3 style="margin:8px 0">示例画廊</h3> 
+       <div class="gallery" id="gallery"> 
+         <!-- cards generated by JS --> 
+       </div> 
+     </section> 
+
+     <footer> 
+       <div>版本: 1.0</div> 
+       <div>&copy; 2025 LM点阵画图</div> 
+     </footer> 
+   </main> 
+
+   <script> 
+     // ---------- 配置 ---------- 
+     // 假设编辑器文件名为 "index.html"（你之前的画图文件）， 
+     // 如果编辑器文件为 editor.html 或 pixel-editor.html，请修改 editFile 变量。 
+     const editFile = 'painter.html'; 
+
+     // 工具函数：打开编辑器并通过 query 参数传入 cols/rows/cellSize 
+     function openEditorWith(cols, rows, cellSize) { 
+       // 通过 query 传参，编辑器可根据需要解析（若当前编辑器不解析 query，可手动在编辑器中支持） 
+       const url = `${editFile}?cols=${cols}&rows=${rows}&cellSize=${cellSize}`; 
+       window.open(url, '_blank'); 
+     } 
+
+     // 生成缩略预览（在首页显示小像素图） 
+     function makePreviewCanvas(cols, rows, scale, drawFn) { 
+       const c = document.createElement('canvas'); 
+       c.width = cols * scale; 
+       c.height = rows * scale; 
+       const ctx = c.getContext('2d'); 
+       ctx.imageSmoothingEnabled = false; 
+       // clear (transparent bg with checker) 
+       ctx.fillStyle = '#fff'; 
+       ctx.fillRect(0,0,c.width,c.height); 
+       // draw pixels from drawFn(px,py) => color or empty 
+       for(let x=0;x<cols;x++){ 
+         for(let y=0;y<rows;y++){ 
+           const col = drawFn(x,y); 
+           if(col){ 
+             ctx.fillStyle = col; 
+             ctx.fillRect(x*scale,y*scale,scale,scale); 
+           } 
+         } 
+       } 
+       return c; 
+     } 
+
+     // 简单示例艺术（返回颜色或空） 
+     function samplePatternA(x,y,cols,rows){ 
+       // smiley 32x32 
+       const cx = Math.floor(cols/2); 
+       const cy = Math.floor(rows/2); 
+       const dx = x-cx, dy = y-cy; 
+       if(dx*dx+dy*dy < (Math.min(cols,rows)/2 - 1)**2) { 
+         // face 
+         if((x===12 && y===12) || (x===20 && y===12)) return '#111'; 
+         if((y>18 && y<22 && x>10 && x<22 && ((x+y)%2===0))) return '#111'; 
+         return '#ffdd4b'; 
+       } 
+       return ''; 
+     } 
+
+     function samplePatternB(x,y,cols,rows){ 
+       // heart-ish 
+       const s = Math.min(cols,rows); 
+       const cx = cols/2, cy = rows/2 - 2; 
+       const rx = (x-cx)/ (s/3), ry = (y-cy)/(s/3); 
+       if((rx*rx + ry*ry - 0.35*rx*ry) < 1) { 
+         return (x%2===0) ? '#ff6b6b' : '#ff8fa1'; 
+       } 
+       return ''; 
+     } 
+
+     function samplePatternC(x,y,cols,rows){ 
+       // chess + accent 
+       if((x+y)%2===0) return '#222b3a'; 
+       if((x+y)%3===0) return '#22c1c3'; 
+       return '#3b4254'; 
+     } 
+
+     // 填充 gallery 
+     const galleryEl = document.getElementById('gallery'); 
+     const examples = [ 
+       {w:32,h:32,scale:4,fn:(x,y)=>samplePatternA(x,y,32,32), title:'笑脸 32x32'}, 
+       {w:64,h:64,scale:2,fn:(x,y)=>samplePatternB(x,y,64,64), title:'爱心 64x64'}, 
+       {w:24,h:24,scale:4,fn:(x,y)=>samplePatternC(x,y,24,24), title:'图案 24x24'}, 
+       {w:16,h:16,scale:8,fn:(x,y)=>samplePatternC(x,y,16,16), title:'迷你 16x16'}, 
+       {w:128,h:128,scale:1,fn:(x,y)=>samplePatternC(x,y,128,128), title:'大图 128x128'}, 
+       {w:48,h:48,scale:3,fn:(x,y)=>samplePatternB(x,y,48,48), title:'渐变 48x48'} 
+     ]; 
+
+     examples.forEach((ex, idx)=>{ 
+       const card = document.createElement('div'); 
+       card.className = 'card'; 
+       const previewWrap = document.createElement('div'); 
+       previewWrap.className = 'canvas-preview'; 
+       const canvas = makePreviewCanvas(ex.w, ex.h, ex.scale, ex.fn); 
+       // scale preview to fit 140 box while keeping image-rendering: pixelated 
+       // We'll create an image element with scaled up data URL to ensure crisp pixel look 
+       const img = new Image(); 
+       img.src = canvas.toDataURL(); 
+       img.style.width = '100%'; 
+       img.style.height = '100%'; 
+       img.style.objectFit = 'cover'; 
+       previewWrap.appendChild(img); 
+
+       const meta = document.createElement('div'); 
+       meta.style.display='flex';meta.style.width='100%';meta.style.justifyContent='space-between';meta.style.alignItems='center'; 
+       const left = document.createElement('div'); 
+       left.innerHTML = `<div style="font-weight:600">${ex.title}</div><div class="small">${ex.w}×${ex.h}</div>`; 
+       const btn = document.createElement('button'); 
+       btn.className = 'btn btn-ghost'; 
+       btn.textContent = '使用模板'; 
+       btn.onclick = ()=> openEditorWith(ex.w, ex.h, parseInt(Math.max(1, Math.floor(16 * (32/ex.w))),10) ); 
+
+       card.appendChild(previewWrap); 
+       meta.appendChild(left); 
+       meta.appendChild(btn); 
+       card.appendChild(meta); 
+       galleryEl.appendChild(card); 
+     }); 
+
+     // 生成侧栏缩略图内容 
+     function fillThumb(id,w,h,fn){ 
+       const el = document.getElementById(id); 
+       const c = makePreviewCanvas(w,h, Math.floor(64/Math.max(w,h)), fn); 
+       c.style.width = '64px'; 
+       c.style.height = '64px'; 
+       c.style.imageRendering = 'pixelated'; 
+       el.appendChild(c); 
+     } 
+     fillThumb('thumb32', 32,32, (x,y)=>samplePatternA(x,y,32,32)); 
+     fillThumb('thumb64', 64,64, (x,y)=>samplePatternB(x,y,64,64)); 
+     fillThumb('thumb16', 16,16, (x,y)=>samplePatternC(x,y,16,16)); 
+
+     // 绑定按钮 
+     document.getElementById('startPreset').addEventListener('click', ()=>{ 
+       const v = document.getElementById('presetSelect').value; 
+       const [w,h,sz] = v.split('x').map(Number); 
+       openEditorWith(w,h,sz); 
+     }); 
+
+     document.querySelectorAll('[data-preset]').forEach(btn=>{ 
+       btn.addEventListener('click', (e)=>{ 
+         const p = btn.getAttribute('data-preset').split('x').map(Number); 
+         openEditorWith(p[0], p[1], p[2]); 
+       }); 
+     }); 
+
+     document.getElementById('openEditorBtn').addEventListener('click', ()=>{ 
+       window.open(editFile, '_blank'); 
+     }); 
+
+     document.getElementById('openGalleryBtn').addEventListener('click', ()=>{ 
+       window.scrollTo({top: document.querySelector('.gallery').offsetTop - 20, behavior:'smooth'}); 
+     }); 
+
+     document.getElementById('openTutorial').addEventListener('click', ()=>{ 
+       alert('快速教程：选择铅笔并选择颜色；鼠标拖绘以着色；按 Z 撤销，Y 重做；导出 PNG 保存作品。若要将当前配置传入编辑器，可使用首页“开始绘制”按钮。'); 
+     }); 
+
+     // 小提示：若你希望编辑器在打开时自动根据 URL 参数设置网格， 
+     // 请让我修改你的编辑器文件，我可以在编辑器中加入解析 querystring 的逻辑， 
+     // 或者使用 localStorage 传递初始配置（我可以为你实现）。 
+   </script> 
+ </body> 
+ </html>
