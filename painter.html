@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LM点阵画图 (像素画) — Pixel Art Editor</title>
+  <style>
+    :root{
+      --ui-bg:#f7f7f8;
+      --panel-bg:#ffffff;
+      --accent:#0078d4;
+      --muted:#666;
+      --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+    body{background:linear-gradient(180deg,#f0f4f9 0%,var(--ui-bg) 100%);display:flex;align-items:flex-start;gap:20px;padding:24px;box-sizing:border-box;}
+    .container{display:flex;gap:20px;width:100%;max-width:1200px;margin:0 auto;}
+    .panel{background:var(--panel-bg);padding:14px;border-radius:10px;box-shadow:var(--shadow);}
+    .left{flex:0 0 360px;}
+    .right{flex:1;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;min-height:560px;}
+    h1{font-size:16px;margin:0 0 8px;}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px;}
+    input[type="number"],select,input[type="text"]{width:100%;padding:8px;border-radius:6px;border:1px solid #e2e6ea;background:#fff;box-sizing:border-box;}
+    .row{display:flex;gap:8px;align-items:center;}
+    button{padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.08);background:#fff;cursor:pointer;}
+    button.primary{background:var(--accent);color:#fff;border-color:transparent;}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+    .canvas-wrap{background:#fff;border-radius:8px;padding:12px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;}
+    #gridCanvas{image-rendering:pixelated;border-radius:6px;background:linear-gradient(90deg,#fff,#fff);}
+    .small{font-size:12px;padding:6px 8px;}
+    .status{font-size:12px;color:var(--muted);margin-top:8px;}
+    .flex-col{display:flex;flex-direction:column;gap:8px;}
+    .footer{font-size:12px;color:var(--muted);text-align:center;margin-top:8px;}
+    .controls-full{grid-column:1/-1;}
+    input[type="color"]{padding:0;border:0;background:transparent;height:36px;width:48px;}
+    .file-input{display:none;}
+    .hint{font-size:12px;color:#888;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="panel left">
+      <h1>点阵画图 — 控制面板</h1>
+
+      <div class="controls">
+        <div>
+          <label>网格宽 (像素)</label>
+          <input id="gridW" type="number" min="4" max="200" value="32">
+        </div>
+        <div>
+          <label>网格高 (像素)</label>
+          <input id="gridH" type="number" min="4" max="200" value="32">
+        </div>
+
+        <div>
+          <label>单元格大小 (px)</label>
+          <input id="cellSize" type="number" min="4" max="80" value="16">
+        </div>
+        <div>
+          <label>显示网格线</label>
+          <select id="showGrid">
+            <option value="1" selected>显示</option>
+            <option value="0">隐藏</option>
+          </select>
+        </div>
+
+        <div class="controls-full">
+          <label>颜色</label>
+          <div class="row">
+            <input id="colorPicker" type="color" value="#000000">
+            <input id="hexColor" type="text" value="#000000" style="flex:1">
+          </div>
+        </div>
+
+        <div>
+          <label>工具</label>
+          <select id="tool">
+            <option value="pen">铅笔</option>
+            <option value="eraser">橡皮</option>
+            <option value="fill">填充桶</option>
+            <option value="eyedrop">吸管</option>
+          </select>
+          <div class="hint">铅笔(B) | 橡皮(E) | 填充桶(F) | 吸管(C) | 吸管工具用于从画布上的现有像素中拾取颜色。</div>
+        </div>
+        <div>
+          <label>画布背景 (透明/白色)</label>
+          <select id="bgAlpha">
+            <option value="transparent">透明</option>
+            <option value="white">白色</option>
+          </select>
+        </div>
+
+        <div class="controls-full">
+          <label>操作</label>
+            <div class="toolbar">
+              <button id="applyGrid" class="small">应用网格</button>
+              <button id="clearBtn" class="small">清空</button>
+              <button id="undoBtn" class="small">撤销</button>
+              <button id="redoBtn" class="small">重做</button>
+              <button id="exportPng" class="small primary">导出 PNG</button>
+              <button id="saveLM" class="small">保存 LM</button>
+              <button id="exportJson" class="small">导出 JSON</button>
+              <button id="loadJsonBtn" class="small">加载 LM/JSON</button>
+              <label class="small" style="display:inline-block;">
+                <input id="importImg" class="file-input" type="file" accept="image/*">
+                加载 PNG
+              </label>
+            </div>
+        </div>
+
+        <div class="controls-full">
+          <label>快捷键</label>
+          <div class="hint">鼠标左键绘制/拖绘，按 Z 撤销，Y 重做，C 吸管，E 橡皮，B 铅笔</div>
+        </div>
+      </div>
+      <div class="status">当前: <span id="status">就绪</span></div>
+      <div class="footer">保存为 PNG 可获得放大的像素图。</div>
+    </div>
+
+    <div class="panel right">
+      <h1>画布预览</h1>
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="gridCanvas"></canvas>
+      </div>
+      <div class="status">网格: <span id="gridInfo">32×32</span> · 缩放: <span id="scaleInfo">16 px/格</span></div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  // DOM
+  const gridWInput = document.getElementById('gridW');
+  const gridHInput = document.getElementById('gridH');
+  const cellSizeInput = document.getElementById('cellSize');
+  const showGridSelect = document.getElementById('showGrid');
+  const colorPicker = document.getElementById('colorPicker');
+  const hexColor = document.getElementById('hexColor');
+  const toolSelect = document.getElementById('tool');
+  const bgAlphaSelect = document.getElementById('bgAlpha');
+  const applyGridBtn = document.getElementById('applyGrid');
+  const clearBtn = document.getElementById('clearBtn');
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+  const exportPngBtn = document.getElementById('exportPng');
+  const saveLMBtn = document.getElementById('saveLM');
+  const exportJsonBtn = document.getElementById('exportJson');
+  const loadJsonBtn = document.getElementById('loadJsonBtn');
+  const importImgInput = document.getElementById('importImg');
+  const statusEl = document.getElementById('status');
+  const gridCanvas = document.getElementById('gridCanvas');
+  const gridInfo = document.getElementById('gridInfo');
+  const scaleInfo = document.getElementById('scaleInfo');
+
+
+
+  // State - 使用默认值初始化
+  let cols = parseInt(gridWInput.value,10);
+  let rows = parseInt(gridHInput.value,10);
+  let cellSize = parseInt(cellSizeInput.value,10);
+  let showGrid = showGridSelect.value === '1';
+  let currentColor = colorPicker.value;
+  let tool = toolSelect.value;
+  let bgAlpha = bgAlphaSelect.value;
+  let isMouseDown = false;
+  let dragging = false;
+  let canvas, ctx;
+  let pixelData = createPixelArray(cols, rows); // array of strings (hex or empty for transparent)
+  let undoStack = [];
+  let redoStack = [];
+  const MAX_UNDO = 80;
+
+  // Init canvas
+  function setupCanvas(){
+    // 更新其他状态变量
+    showGrid = showGridSelect.value === '1';
+    currentColor = colorPicker.value;
+    tool = toolSelect.value;
+    bgAlpha = bgAlphaSelect.value;
+    
+    // 重新计算画布尺寸
+    const canvasWidth = cols * cellSize;
+    const canvasHeight = rows * cellSize;
+    
+    // 强制设置canvas尺寸
+    gridCanvas.width = canvasWidth;
+    gridCanvas.height = canvasHeight;
+    gridCanvas.style.width = (Math.min(canvasWidth, 960)) + 'px';
+    gridCanvas.style.height = (Math.min(canvasHeight, 720)) + 'px';
+    
+    // 重新获取canvas上下文
+    canvas = gridCanvas;
+    ctx = canvas.getContext('2d', {alpha: true});
+    ctx.imageSmoothingEnabled = false;
+    
+    // 重置像素数据
+    pixelData = createPixelArray(cols, rows);
+    undoStack = [];
+    redoStack = [];
+    pushHistory();
+    
+    // 绘制网格
+    draw();
+    
+    // 更新状态显示
+    gridInfo.textContent = cols + '×' + rows;
+    scaleInfo.textContent = cellSize + ' px/格';
+  }
+
+  function createPixelArray(c, r){
+    const arr = new Array(c);
+    for(let x=0;x<c;x++){
+      arr[x] = new Array(r);
+      for(let y=0;y<r;y++) arr[x][y] = '';
+    }
+    return arr;
+  }
+
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+  // Drawing grid to canvas
+  function draw(){
+    // clear
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // background
+    if(bgAlpha === 'white'){
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+    } else {
+      // transparent background => show checkerboard for visibility
+      drawCheckerboard();
+    }
+
+    // draw pixels
+    for(let x=0;x<cols;x++){
+      for(let y=0;y<rows;y++){
+        const col = pixelData[x][y];
+        if(col){
+          ctx.fillStyle = col;
+          ctx.fillRect(x*cellSize, y*cellSize, cellSize, cellSize);
+        }
+      }
+    }
+
+    // grid lines
+    if(showGrid && cellSize >= 4){
+      ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for(let x=0;x<=cols;x++){
+        const cx = x*cellSize + 0.5;
+        ctx.moveTo(cx, 0);
+        ctx.lineTo(cx, canvas.height);
+      }
+      for(let y=0;y<=rows;y++){
+        const cy = y*cellSize + 0.5;
+        ctx.moveTo(0, cy);
+        ctx.lineTo(canvas.width, cy);
+      }
+      ctx.stroke();
+    }
+  }
+
+  function drawCheckerboard(){
+    const s = 8;
+    for(let x=0;x<canvas.width;x+=s){
+      for(let y=0;y<canvas.height;y+=s){
+        const odd = ((x/s|0) + (y/s|0))%2;
+        ctx.fillStyle = odd ? '#eee' : '#fff';
+        ctx.fillRect(x,y,s,s);
+      }
+    }
+  }
+
+  // Convert client coordinates to grid coords
+  function toGridCoords(clientX, clientY){
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = Math.floor((clientX - rect.left) * scaleX / cellSize);
+    const y = Math.floor((clientY - rect.top) * scaleY / cellSize);
+    return {x, y};
+  }
+
+  // Tools
+  function applyToolAt(gx, gy){
+    if(gx < 0 || gy < 0 || gx >= cols || gy >= rows) return;
+    if(tool === 'pen'){
+      setPixel(gx, gy, currentColor);
+    } else if(tool === 'eraser'){
+      setPixel(gx, gy, '');
+    } else if(tool === 'fill'){
+      floodFill(gx, gy, pixelData[gx][gy], currentColor);
+    } else if(tool === 'eyedrop'){
+      const c = pixelData[gx][gy] || '#00000000';
+      if(pixelData[gx][gy]) {
+        colorPicker.value = pixelData[gx][gy];
+        hexColor.value = pixelData[gx][gy];
+        currentColor = pixelData[gx][gy];
+      } else {
+        // transparent -> set to transparent (no color)
+        // do nothing except update color input to black transparent indicator
+        colorPicker.value = '#000000';
+        hexColor.value = '#000000';
+        currentColor = '#000000';
+      }
+    }
+  }
+
+  function setPixel(gx, gy, color){
+    if(pixelData[gx][gy] === color) return;
+    pushHistoryIfNeeded();
+    pixelData[gx][gy] = color;
+    draw();
+  }
+
+  function pushHistoryIfNeeded(){
+    // add snapshot before first change in a drag session
+    if(!dragging){
+      pushHistory();
+      dragging = true;
+      redoStack = [];
+    }
+  }
+
+  function pushHistory(){
+    // deep copy
+    const snap = pixelData.map(col=>col.slice());
+    undoStack.push(snap);
+    if(undoStack.length > MAX_UNDO) undoStack.shift();
+    updateUndoButtons();
+  }
+
+  function undo(){
+    if(undoStack.length <= 1) return;
+    const cur = undoStack.pop();
+    redoStack.push(cur);
+    const prev = undoStack[undoStack.length-1];
+    pixelData = prev.map(col=>col.slice());
+    draw();
+    updateUndoButtons();
+  }
+
+  function redo(){
+    if(redoStack.length === 0) return;
+    const snap = redoStack.pop();
+    undoStack.push(snap);
+    pixelData = snap.map(col=>col.slice());
+    draw();
+    updateUndoButtons();
+  }
+
+  function updateUndoButtons(){
+    undoBtn.disabled = undoStack.length <= 1;
+    redoBtn.disabled = redoStack.length === 0;
+  }
+
+  // Flood fill
+  function floodFill(sx, sy, targetColor, replacementColor){
+    if(targetColor === replacementColor) return;
+    if(targetColor === undefined) targetColor = '';
+    pushHistoryIfNeeded();
+    const stack = [[sx,sy]];
+    while(stack.length){
+      const [x,y] = stack.pop();
+      if(x<0||y<0||x>=cols||y>=rows) continue;
+      if(pixelData[x][y] !== targetColor) continue;
+      pixelData[x][y] = replacementColor;
+      stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+    }
+    draw();
+  }
+
+  // Mouse events
+  gridCanvas.addEventListener('mousedown', (e)=>{
+    isMouseDown = true;
+    const {x,y} = toGridCoords(e.clientX, e.clientY);
+    applyToolAt(x,y);
+  });
+  window.addEventListener('mouseup', (e)=>{
+    if(isMouseDown){
+      isMouseDown = false;
+      dragging = false;
+      statusEl.textContent = '就绪';
+    }
+  });
+  gridCanvas.addEventListener('mousemove', (e)=>{
+    const {x,y} = toGridCoords(e.clientX, e.clientY);
+    if(isMouseDown){
+      if(tool === 'pen' || tool === 'eraser'){
+        applyToolAt(x,y);
+      }
+    }
+    statusEl.textContent = `坐标 ${x},${y}  颜色: ${pixelData[x] && pixelData[x][y] ? pixelData[x][y] : '透明'}`;
+  });
+
+  // Touch support
+  gridCanvas.addEventListener('touchstart', (e)=>{
+    e.preventDefault();
+    const t = e.touches[0];
+    const {x,y} = toGridCoords(t.clientX, t.clientY);
+    isMouseDown = true;
+    applyToolAt(x,y);
+  }, {passive:false});
+  gridCanvas.addEventListener('touchmove', (e)=>{
+    e.preventDefault();
+    const t = e.touches[0];
+    const {x,y} = toGridCoords(t.clientX, t.clientY);
+    if(isMouseDown){
+      applyToolAt(x,y);
+    }
+  }, {passive:false});
+  window.addEventListener('touchend', ()=>{ isMouseDown=false; dragging=false; });
+
+  // Inputs bindings
+  colorPicker.addEventListener('input', (e)=>{
+    currentColor = e.target.value;
+    hexColor.value = currentColor;
+  });
+  hexColor.addEventListener('change', (e)=>{
+    const v = e.target.value.trim();
+    if(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)){
+      colorPicker.value = v;
+      currentColor = v;
+    } else {
+      alert('请输入有效的十六进制颜色（例如 #ff0000）');
+      e.target.value = colorPicker.value;
+    }
+  });
+  toolSelect.addEventListener('change', (e)=>{
+    tool = e.target.value;
+  });
+  bgAlphaSelect.addEventListener('change', (e)=>{
+    bgAlpha = e.target.value;
+    draw();
+  });
+  showGridSelect.addEventListener('change', (e)=>{
+    showGrid = e.target.value === '1';
+    draw();
+  });
+
+  applyGridBtn.addEventListener('click', ()=>{
+    // confirm reset grid if size changed
+    const newCols = parseInt(gridWInput.value,10);
+    const newRows = parseInt(gridHInput.value,10);
+    const same = (newCols === cols && newRows === rows && parseInt(cellSizeInput.value,10) === cellSize);
+    if(!same){
+      if(!confirm('更改网格尺寸会重置画布，是否继续？')) return;
+      cols = clamp(newCols,2,200);
+      rows = clamp(newRows,2,200);
+      cellSize = clamp(parseInt(cellSizeInput.value,10)||16,4,200);
+      pixelData = createPixelArray(cols, rows);
+      undoStack = [];
+      redoStack = [];
+      pushHistory();
+      setupCanvas();
+    }
+  });
+
+  clearBtn.addEventListener('click', ()=>{
+    if(!confirm('清空画布？')) return;
+    pushHistory();
+    pixelData = createPixelArray(cols, rows);
+    draw();
+  });
+
+  undoBtn.addEventListener('click', ()=>undo());
+  redoBtn.addEventListener('click', ()=>redo());
+
+  exportPngBtn.addEventListener('click', ()=>{
+    // create an offscreen canvas at native pixel size: width = cols, height = rows, scale up using nearest-neighbor for crispness
+    const out = document.createElement('canvas');
+    out.width = cols;
+    out.height = rows;
+    const outCtx = out.getContext('2d');
+    outCtx.imageSmoothingEnabled = false;
+    // fill transparent or white
+    if(bgAlpha === 'white'){
+      outCtx.fillStyle = '#ffffff';
+      outCtx.fillRect(0,0,out.width,out.height);
+    } else {
+      // leave transparent
+    }
+    for(let x=0;x<cols;x++){
+      for(let y=0;y<rows;y++){
+        const c = pixelData[x][y];
+        if(c){
+          outCtx.fillStyle = c;
+          outCtx.fillRect(x,y,1,1);
+        }
+      }
+    }
+    // upscale by cellSize (optional) - we will offer both small and upscaled download
+    const upscale = Math.max(1, parseInt(cellSizeInput.value,10) || cellSize);
+    const final = document.createElement('canvas');
+    final.width = out.width * upscale;
+    final.height = out.height * upscale;
+    const fctx = final.getContext('2d');
+    fctx.imageSmoothingEnabled = false;
+    if(bgAlpha === 'white'){
+      fctx.fillStyle = '#ffffff';
+      fctx.fillRect(0,0,final.width,final.height);
+    }
+    fctx.drawImage(out, 0, 0, final.width, final.height);
+    final.toBlob((blob)=>{
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `pixelart_${cols}x${rows}.png`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+  });
+
+  // 保存为LM格式
+  saveLMBtn.addEventListener('click', ()=>{
+    // 创建LM格式的数据结构
+    const lmData = {
+      version: '1.0',
+      dotSize: 5,
+      gridSize: 10,
+      width: cols,
+      height: rows,
+      dots: []
+    };
+
+    // 转换像素数据为LM格式的dots数组
+    for(let x=0;x<cols;x++){
+      for(let y=0;y<rows;y++){
+        const color = pixelData[x][y];
+        if(color){
+          lmData.dots.push({
+            x: x,
+            y: y,
+            color: color
+          });
+        }
+      }
+    }
+
+    const data = JSON.stringify(lmData, null, 2);
+    const blob = new Blob([data], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `dotpainting_${cols}x${rows}.lm`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // 导出为JSON格式
+  exportJsonBtn.addEventListener('click', ()=>{
+    const payload = {
+      cols, rows, cellSize, bgAlpha, pixelData
+    };
+    const data = JSON.stringify(payload);
+    const blob = new Blob([data], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `pixelart_${cols}x${rows}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  loadJsonBtn.addEventListener('click', ()=>{
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.lm';
+    input.onchange = ()=>{
+      const f = input.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const obj = JSON.parse(reader.result);
+          
+          // 检查是否为LM格式
+          if(obj.dots && obj.width && obj.height){
+            // LM格式
+            cols = obj.width;
+            rows = obj.height;
+            cellSize = 16; // 默认值
+            bgAlpha = 'transparent'; // 默认值
+            
+            // 转换LM格式的dots数组为像素数据
+            pixelData = createPixelArray(cols, rows);
+            obj.dots.forEach(dot => {
+              if(dot.x >= 0 && dot.x < cols && dot.y >= 0 && dot.y < rows){
+                pixelData[dot.x][dot.y] = dot.color;
+              }
+            });
+          }
+          // 旧的JSON格式保持不变
+          else if(obj.cols && obj.rows && obj.pixelData){
+            cols = obj.cols; 
+            rows = obj.rows; 
+            cellSize = obj.cellSize || cellSize; 
+            bgAlpha = obj.bgAlpha || bgAlpha;
+            pixelData = obj.pixelData;
+          }
+          else{
+            throw new Error('格式错误');
+          }
+          
+          gridWInput.value = cols; 
+          gridHInput.value = rows; 
+          cellSizeInput.value = cellSize; 
+          bgAlphaSelect.value = bgAlpha;
+          undoStack = []; 
+          redoStack = [];
+          pushHistory();
+          setupCanvas();
+        }catch(err){
+          alert('加载失败: ' + err.message);
+        }
+      };
+      reader.readAsText(f);
+    };
+    input.click();
+  });
+
+  importImgInput.addEventListener('change', (e)=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const img = new Image();
+    const url = URL.createObjectURL(f);
+    img.onload = ()=>{
+      // draw the image into a temporary canvas at size cols x rows to pixelate
+      const tmp = document.createElement('canvas');
+      tmp.width = cols; tmp.height = rows;
+      const tctx = tmp.getContext('2d');
+      tctx.drawImage(img, 0, 0, tmp.width, tmp.height);
+      const data = tctx.getImageData(0,0,tmp.width,tmp.height).data;
+      pushHistory();
+      for(let x=0;x<cols;x++){
+        for(let y=0;y<rows;y++){
+          const i = (y*cols + x) * 4;
+          const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+          if(a === 0){
+            pixelData[x][y] = '';
+          } else {
+            pixelData[x][y] = rgbaToHex(r,g,b);
+          }
+        }
+      }
+      draw();
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  });
+
+  function rgbaToHex(r,g,b){
+    return '#' + [r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+  }
+
+  // keyboard shortcuts
+  window.addEventListener('keydown', (e)=>{
+    if(e.ctrlKey || e.metaKey){
+      if(e.key === 'z'){ e.preventDefault(); undo(); }
+      if(e.key === 'y'){ e.preventDefault(); redo(); }
+    } else {
+      if(e.key === 'z'){ undo(); }
+      if(e.key === 'y'){ redo(); }
+      if(e.key === 'c'){ toolSelect.value = 'eyedrop'; tool = 'eyedrop'; }
+      if(e.key === 'e'){ toolSelect.value = 'eraser'; tool = 'eraser'; }
+      if(e.key === 'b'){ toolSelect.value = 'pen'; tool = 'pen'; }
+      if(e.key === 'f'){ toolSelect.value = 'fill'; tool = 'fill'; }
+    }
+  });
+
+  // 解析URL参数
+  function parseUrlParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const colsParam = urlParams.get('cols');
+    const rowsParam = urlParams.get('rows');
+    const cellSizeParam = urlParams.get('cellSize');
+    
+    if (colsParam && rowsParam) {
+      // 显示加载状态
+      statusEl.textContent = `正在加载模板: ${colsParam}×${rowsParam}`;
+      
+      // 直接设置内部变量
+      cols = parseInt(colsParam, 10);
+      rows = parseInt(rowsParam, 10);
+      cellSize = cellSizeParam ? parseInt(cellSizeParam, 10) : cellSize;
+      
+      // 更新输入框的值
+      gridWInput.value = cols;
+      gridHInput.value = rows;
+      cellSizeInput.value = cellSize;
+      
+      // 重新创建画布和像素数据
+      pixelData = createPixelArray(cols, rows);
+      undoStack = [];
+      redoStack = [];
+      pushHistory();
+      
+      // 直接调用setupCanvas()来应用设置
+      setupCanvas();
+      
+      // 更新状态信息
+      statusEl.textContent = `已加载模板: ${cols}×${rows}`;
+    }
+  }
+
+  // initialize
+  function init(){
+    setupCanvas();
+    pushHistory();
+    updateUndoButtons();
+    // 解析URL参数
+    parseUrlParams();
+  }
+
+  init();
+
+  // Helper: ensure history has current snapshot
+  function ensureHistory(){
+    if(undoStack.length === 0) pushHistory();
+  }
+
+  // At mouseup end of drag, finalize
+  window.addEventListener('mouseup', ()=>{
+    dragging = false;
+  });
+
+})();
+</script>
+</body>
+</html>
