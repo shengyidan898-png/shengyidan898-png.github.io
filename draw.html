@@ -225,6 +225,8 @@
                     <div class="toolbar">
                         <button id="clearBtn" class="small">清空画布</button>
                         <button id="saveBtn" class="small primary">保存图片</button>
+                        <button id="savePatBtn" class="small primary">保存.pat</button>
+                        <button id="openPatBtn" class="small">打开.pat</button>
                         <button id="backBtn" class="small">返回首页</button>
                     </div>
                 </div>
@@ -252,10 +254,19 @@
             const bgColor = document.getElementById('bgColor');
             const clearBtn = document.getElementById('clearBtn');
             const saveBtn = document.getElementById('saveBtn');
+            const savePatBtn = document.getElementById('savePatBtn');
+            const openPatBtn = document.getElementById('openPatBtn');
             const backBtn = document.getElementById('backBtn');
             const status = document.getElementById('status');
             const canvas = document.getElementById('drawCanvas');
             const ctx = canvas.getContext('2d');
+            
+            // 隐藏的文件输入元素，用于打开.pat文件
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.pat';
+            fileInput.style.display = 'none';
+            document.body.appendChild(fileInput);
             
             // 状态变量
             let isDrawing = false;
@@ -316,6 +327,73 @@
                 a.download = `drawing_${Date.now()}.png`;
                 a.click();
                 status.textContent = '图片已保存';
+            }
+            
+            // 保存.pat文件
+            function savePatFile() {
+                // 创建.pat文件数据结构
+                const patData = {
+                    version: '1.0',
+                    width: canvas.width,
+                    height: canvas.height,
+                    backgroundColor: bgColor.value,
+                    imageData: canvas.toDataURL('image/png'),
+                    createdAt: new Date().toISOString()
+                };
+                
+                // 将数据转换为JSON字符串
+                const jsonData = JSON.stringify(patData, null, 2);
+                const blob = new Blob([jsonData], { type: 'application/json' });
+                
+                // 创建下载链接
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `drawing_${Date.now()}.pat`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+                
+                status.textContent = '.pat文件已保存';
+            }
+            
+            // 打开.pat文件
+            function openPatFile(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        // 解析.pat文件数据
+                        const patData = JSON.parse(e.target.result);
+                        
+                        // 验证文件格式
+                        if (patData.version && patData.width && patData.height && patData.imageData) {
+                            // 设置画布尺寸
+                            canvas.width = patData.width;
+                            canvas.height = patData.height;
+                            tempCanvas.width = canvas.width;
+                            tempCanvas.height = canvas.height;
+                            
+                            // 设置背景颜色
+                            bgColor.value = patData.backgroundColor || '#ffffff';
+                            ctx.fillStyle = bgColor.value;
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            
+                            // 绘制图像数据
+                            const img = new Image();
+                            img.onload = () => {
+                                ctx.drawImage(img, 0, 0);
+                                status.textContent = '.pat文件已打开';
+                            };
+                            img.onerror = () => {
+                                status.textContent = '打开.pat文件失败：图像数据无效';
+                            };
+                            img.src = patData.imageData;
+                        } else {
+                            throw new Error('无效的.pat文件格式');
+                        }
+                    } catch (error) {
+                        status.textContent = `打开.pat文件失败：${error.message}`;
+                    }
+                };
+                reader.readAsText(file);
             }
             
             // 鼠标按下事件
@@ -430,6 +508,21 @@
             
             clearBtn.addEventListener('click', clearCanvas);
             saveBtn.addEventListener('click', saveImage);
+            savePatBtn.addEventListener('click', savePatFile);
+            openPatBtn.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            // 文件输入变化事件
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    openPatFile(file);
+                    // 重置文件输入，以便再次选择同一文件
+                    e.target.value = '';
+                }
+            });
+            
             backBtn.addEventListener('click', () => {
                 window.location.href = 'index.html';
             });
