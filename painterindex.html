@@ -1,12 +1,10 @@
-
+<!doctype html> 
  <html lang="zh-CN"> 
  <head> 
    <meta charset="utf-8" /> 
    <meta name="viewport" content="width=device-width,initial-scale=1" /> 
    <title>点阵画图 — 首页</title> 
    <meta name="description" content="轻量的点阵（像素）画图工具。快速开始、模板、示例画廊与使用帮助。" /> 
-   <!-- Google reCAPTCHA v2 -->
-   <script src="https://www.google.com/recaptcha/api.js"></script> 
    <style> 
      :root{ 
        --bg:#0f1724; 
@@ -116,129 +114,287 @@
      // 假设编辑器文件名为 "index.html"（你之前的画图文件）， 
      // 如果编辑器文件为 editor.html 或 pixel-editor.html，请修改 editFile 变量。 
      const editFile = 'painter.html'; 
-     
-     // reCAPTCHA 配置
-     const RECAPTCHA_SITE_KEY = '6LfOeC8sAAAAAIW6MSc90JxLe21LIcpRuBO5fHLJ';
+
+     // ---------- 简化版验证系统 ---------- 
      let isVerified = false;
-     
-     // 创建 reCAPTCHA 弹窗
-     function createRecaptchaModal() {
+     let pendingUrl = null;
+
+     // 验证配置
+     const verificationConfig = {
+       gridSize: 3,
+       objects: ['狗', '自行车', '风景', '汽车', '房屋'],
+       colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7'],
+       totalCells: 9
+     };
+
+     // 创建验证弹窗
+     function createVerificationModal() {
        // 检查是否已存在
-       if (document.getElementById('recaptchaModal')) {
+       if (document.getElementById('verificationModal')) {
          return;
        }
-       
+
+       // 随机选择一个验证对象
+       const randomObjectIndex = Math.floor(Math.random() * verificationConfig.objects.length);
+       const targetObject = verificationConfig.objects[randomObjectIndex];
+       const targetColor = verificationConfig.colors[randomObjectIndex];
+
+       // 随机生成正确答案（3-5个随机单元格）
+       const correctCells = new Set();
+       const correctCount = Math.floor(Math.random() * 3) + 3; // 3-5个正确单元格
+       while (correctCells.size < correctCount) {
+         correctCells.add(Math.floor(Math.random() * verificationConfig.totalCells));
+       }
+       const correctCellsArray = Array.from(correctCells);
+
        const modal = document.createElement('div');
-       modal.id = 'recaptchaModal';
-       modal.style.position = 'fixed';
-       modal.style.top = '0';
-       modal.style.left = '0';
-       modal.style.width = '100%';
-       modal.style.height = '100%';
-       modal.style.background = 'rgba(0, 0, 0, 0.8)';
-       modal.style.display = 'flex';
-       modal.style.alignItems = 'center';
-       modal.style.justifyContent = 'center';
-       modal.style.zIndex = '1000';
-       modal.style.color = '#fff';
-       
+       modal.id = 'verificationModal';
+       modal.style.cssText = `
+         position: fixed;
+         top: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         background: rgba(0, 0, 0, 0.8);
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         z-index: 1000;
+         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+       `;
+
        const modalContent = document.createElement('div');
-       modalContent.style.background = '#2a3342';
-       modalContent.style.padding = '20px';
-       modalContent.style.borderRadius = '12px';
-       modalContent.style.width = '90%';
-       modalContent.style.maxWidth = '400px';
-       modalContent.style.textAlign = 'center';
-       
+       modalContent.style.cssText = `
+         background: #fff;
+         border-radius: 4px;
+         width: 90%;
+         max-width: 400px;
+         overflow: hidden;
+         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+       `;
+
+       // 头部
+       const modalHeader = document.createElement('div');
+       modalHeader.style.cssText = `
+         padding: 16px;
+         border-bottom: 1px solid #e0e0e0;
+         background: #f8f9fa;
+       `;
+
        const title = document.createElement('h2');
        title.textContent = '人机验证';
-       title.style.marginBottom = '20px';
-       
+       title.style.cssText = `
+         margin: 0;
+         font-size: 18px;
+         font-weight: 400;
+         color: #202124;
+       `;
+
+       modalHeader.appendChild(title);
+       modalContent.appendChild(modalHeader);
+
+       // 主体
+       const modalBody = document.createElement('div');
+       modalBody.style.cssText = `
+         padding: 20px;
+       `;
+
        const description = document.createElement('p');
-       description.textContent = '为了保护网站安全，需要进行人机验证才能访问画图工具。';
-       description.style.marginBottom = '20px';
-       description.style.color = '#ccc';
-       
-       const recaptchaContainer = document.createElement('div');
-       recaptchaContainer.id = 'recaptchaWidget';
-       recaptchaContainer.style.marginBottom = '20px';
-       recaptchaContainer.style.display = 'inline-block';
-       recaptchaContainer.style.width = '304px';
-       recaptchaContainer.style.height = '78px';
-       
-       const closeBtn = document.createElement('button');
-       closeBtn.textContent = '关闭';
-       closeBtn.style.marginTop = '20px';
-       closeBtn.style.padding = '8px 16px';
-       closeBtn.style.backgroundColor = '#667eea';
-       closeBtn.style.color = '#fff';
-       closeBtn.style.border = 'none';
-       closeBtn.style.borderRadius = '8px';
-       closeBtn.style.cursor = 'pointer';
-       closeBtn.addEventListener('click', () => {
+       description.innerHTML = `
+         请选择包含<strong>"${targetObject}"</strong>文字的所有图片块。<br>
+         如果没有，请点击"跳过"。
+       `;
+       description.style.cssText = `
+         margin: 0 0 20px 0;
+         font-size: 14px;
+         color: #5f6368;
+         text-align: center;
+         line-height: 1.5;
+       `;
+
+       // 图片网格容器
+       const gridContainer = document.createElement('div');
+       gridContainer.id = 'verificationGrid';
+       gridContainer.style.cssText = `
+         display: grid;
+         grid-template-columns: repeat(${verificationConfig.gridSize}, 1fr);
+         gap: 1px;
+         background: #e0e0e0;
+         margin-bottom: 15px;
+         border-radius: 4px;
+         overflow: hidden;
+       `;
+
+       // 已选择的单元格
+       const selectedCells = new Set();
+
+       // 创建单元格
+       for (let i = 0; i < verificationConfig.totalCells; i++) {
+         const cell = document.createElement('div');
+         cell.className = 'verificationCell';
+         cell.dataset.cellIndex = i;
+         
+         // 如果是正确单元格，显示对象名称，否则显示空白
+         const isCorrect = correctCells.has(i);
+         cell.innerHTML = isCorrect ? targetObject : '';
+         
+         cell.style.cssText = `
+           width: 80px;
+           height: 80px;
+           background: ${isCorrect ? targetColor : '#f5f5f5'};
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           font-size: 16px;
+           font-weight: bold;
+           color: ${isCorrect ? '#fff' : '#999'};
+           cursor: pointer;
+           position: relative;
+           transition: all 0.2s ease;
+           border: 1px solid #e0e0e0;
+         `;
+
+         // 添加点击事件
+         cell.addEventListener('click', () => {
+           const cellIndex = parseInt(cell.dataset.cellIndex);
+           if (selectedCells.has(cellIndex)) {
+             // 取消选择
+             selectedCells.delete(cellIndex);
+             cell.style.border = '1px solid #e0e0e0';
+             cell.style.transform = 'scale(1)';
+           } else {
+             // 选择
+             selectedCells.add(cellIndex);
+             cell.style.border = '3px solid #1a73e8';
+             cell.style.transform = 'scale(1.05)';
+           }
+         });
+
+         gridContainer.appendChild(cell);
+       }
+
+       // 控制按钮
+       const controls = document.createElement('div');
+       controls.style.cssText = `
+         display: flex;
+         justify-content: space-between;
+         align-items: center;
+         margin-top: 15px;
+       `;
+
+       // 刷新按钮
+       const refreshBtn = document.createElement('button');
+       refreshBtn.innerHTML = '↻';
+       refreshBtn.style.cssText = `
+         width: 40px;
+         height: 40px;
+         border: 1px solid #dadce0;
+         background: white;
+         border-radius: 4px;
+         cursor: pointer;
+         font-size: 18px;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         transition: all 0.2s ease;
+       `;
+       refreshBtn.addEventListener('click', () => {
+         document.body.removeChild(modal);
+         createVerificationModal();
+       });
+
+       // 跳过按钮
+       const skipBtn = document.createElement('button');
+       skipBtn.textContent = '跳过';
+       skipBtn.style.cssText = `
+         padding: 10px 20px;
+         border: 1px solid #dadce0;
+         background: white;
+         border-radius: 4px;
+         cursor: pointer;
+         font-size: 14px;
+         color: #5f6368;
+         transition: all 0.2s ease;
+       `;
+       skipBtn.addEventListener('click', () => {
          document.body.removeChild(modal);
        });
-       
-       modalContent.appendChild(title);
-       modalContent.appendChild(description);
-       modalContent.appendChild(recaptchaContainer);
-       modalContent.appendChild(closeBtn);
+
+       // 验证按钮
+       const verifyBtn = document.createElement('button');
+       verifyBtn.id = 'verifyBtn';
+       verifyBtn.textContent = '验证';
+       verifyBtn.style.cssText = `
+         padding: 10px 20px;
+         border: none;
+         background: #1a73e8;
+         color: white;
+         border-radius: 4px;
+         cursor: pointer;
+         font-size: 14px;
+         font-weight: 500;
+         transition: all 0.2s ease;
+       `;
+       verifyBtn.addEventListener('click', () => {
+         // 验证逻辑：检查选择的单元格是否与正确答案匹配
+         const selectedArray = Array.from(selectedCells);
+         const isCorrect = selectedArray.every(cell => correctCells.has(cell)) && 
+                          selectedArray.length === correctCells.size;
+         
+         if (isCorrect) {
+           isVerified = true;
+           document.body.removeChild(modal);
+           // 如果有等待打开的链接，直接打开
+           if (pendingUrl) {
+             window.open(pendingUrl, '_blank');
+             pendingUrl = null;
+           }
+         } else {
+           // 验证失败，重新生成
+           alert('验证失败，请重试');
+           document.body.removeChild(modal);
+           createVerificationModal();
+         }
+       });
+
+       controls.appendChild(refreshBtn);
+       controls.appendChild(skipBtn);
+       controls.appendChild(verifyBtn);
+
+       modalBody.appendChild(description);
+       modalBody.appendChild(gridContainer);
+       modalBody.appendChild(controls);
+       modalContent.appendChild(modalBody);
        modal.appendChild(modalContent);
        document.body.appendChild(modal);
-       
-       // 显式渲染 reCAPTCHA 组件
-       if (typeof grecaptcha !== 'undefined') {
-         grecaptcha.render(recaptchaContainer, {
-           'sitekey': RECAPTCHA_SITE_KEY,
-           'callback': onRecaptchaSuccess,
-           'theme': 'dark'
-         });
-       } else {
-         // 如果 reCAPTCHA API 还没加载完成，显示错误信息
-         recaptchaContainer.innerHTML = '<p style="color: red;">reCAPTCHA 加载失败，请刷新页面重试。</p>';
-       }
      }
-     
-     // reCAPTCHA 验证成功回调
-     window.onRecaptchaSuccess = function(token) {
-       isVerified = true;
-       const modal = document.getElementById('recaptchaModal');
-       if (modal) {
-         document.body.removeChild(modal);
-       }
-       // 如果有等待打开的链接，直接打开
-       if (window.pendingUrl) {
-         window.open(window.pendingUrl, '_blank');
-         window.pendingUrl = null;
-       }
-     };
-     
+
      // 检查验证并打开链接
-     function checkRecaptchaAndOpen(url) {
+     function checkVerificationAndOpen(url) {
        if (isVerified) {
          window.open(url, '_blank');
        } else {
-         window.pendingUrl = url;
-         createRecaptchaModal();
+         pendingUrl = url;
+         createVerificationModal();
        }
      }
 
      // 绑定按钮 
      document.getElementById('navOpenEditorBtn').addEventListener('click', ()=>{ 
-       checkRecaptchaAndOpen(editFile);
+       checkVerificationAndOpen(editFile);
      }); 
 
      document.getElementById('heroOpenEditorBtn').addEventListener('click', ()=>{ 
-       checkRecaptchaAndOpen(editFile);
+       checkVerificationAndOpen(editFile);
      }); 
 
      // 普通画图按钮事件监听器
      document.getElementById('navOpenDrawBtn').addEventListener('click', ()=>{ 
-       checkRecaptchaAndOpen('draw.html');
+       checkVerificationAndOpen('draw.html');
      }); 
 
      document.getElementById('heroOpenDrawBtn').addEventListener('click', ()=>{ 
-       checkRecaptchaAndOpen('draw.html');
+       checkVerificationAndOpen('draw.html');
      }); 
 
      document.getElementById('openTutorial').addEventListener('click', ()=>{ 
