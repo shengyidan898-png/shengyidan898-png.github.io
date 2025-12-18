@@ -7,17 +7,180 @@
     <title>shengyidan898-png.github.io</title>
     <!-- 引用服务器上的CSS文件 -->
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* 基础样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* 主容器样式 */
+        .container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin: 20px auto;
+            max-width: 800px;
+        }
+        
+        /* 段落样式 */
+        .container p {
+            margin: 10px 0;
+            font-size: 16px;
+            line-height: 1.6;
+            opacity: 0.9;
+            transition: opacity 0.3s ease;
+        }
+        
+        /* 标题样式 */
+        .container h1 {
+            font-size: 24px;
+            font-weight: 700;
+            opacity: 1;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+        
+        /* 副标题样式 */
+        .subtitle {
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+        
+        /* 导航样式 */
+        nav {
+            margin: 30px 0;
+        }
+        
+        nav h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+        
+        /* 链接容器样式 */
+        nav ul {
+            list-style: none;
+            margin-top: 20px;
+            padding: 0;
+        }
+        
+        /* 列表项样式 */
+        nav li {
+            margin: 15px 0;
+        }
+        
+        /* 链接样式 */
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            display: inline-block;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        /* 链接悬停效果 */
+        nav a:hover {
+            background: white;
+            color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border-color: white;
+        }
+        
+        /* 链接:active效果 */
+        nav a:active {
+            transform: translateY(0);
+        }
+        
+        /* 页脚样式 */
+        footer {
+            margin-top: 40px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 15px;
+                margin: 10px;
+            }
+            
+            .container h1 {
+                font-size: 20px;
+            }
+            
+            nav a {
+                font-size: 14px;
+                padding: 6px 12px;
+            }
+        }
+        
+        /* 淡入动画效果 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .container {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        
+        .container h1, .container p {
+            animation: fadeIn 0.8s ease-out forwards;
+            animation-delay: 0.2s;
+            opacity: 0;
+        }
+        
+        nav, nav h2, nav ul, nav li {
+            animation: fadeIn 0.8s ease-out forwards;
+            animation-delay: 0.4s;
+            opacity: 0;
+        }
+        
+        footer {
+            animation: fadeIn 0.8s ease-out forwards;
+            animation-delay: 0.6s;
+            opacity: 0;
+        }
+    </style>
 </head>
 <body>
-    <div class="footer-section">
-        <p>shengyidan898-png.github.io</p>
-        <p>个人网站</p>
-        <ul>
-            <li>
-                <a href="/painterindex.html">点阵画图</a>
-            </li>
-        </ul>
-        <p>&copy; 2025 shengyidan898-png.github.io</p>
+    <div class="container">
+        <header>
+            <h1>shengyidan898-png.github.io</h1>
+            <p class="subtitle">个人网站</p>
+        </header>
+        
+        <nav>
+            <h2>主页</h2>
+            <ul>
+                <li>
+                    <a href="/painterindex.html" class="nav-link">点阵画图</a>
+                </li>
+            </ul>
+        </nav>
+        
+        <footer>
+            <p>&copy; 2025 shengyidan898-png.github.io</p>
+        </footer>
     </div>
 </body>
 </html>
