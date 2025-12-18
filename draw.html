@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>普通画图 - LM点阵画图</title>
+    <style>
+        :root {
+            --ui-bg: #f7f7f8;
+            --panel-bg: #ffffff;
+            --accent: #0078d4;
+            --muted: #666;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(180deg, #f0f4f9 0%, var(--ui-bg) 100%);
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .panel {
+            background: var(--panel-bg);
+            padding: 14px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+        }
+        
+        .left {
+            flex: 0 0 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow: hidden;
+        }
+        
+        h1 {
+            font-size: 18px;
+            margin: 0 0 8px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        label {
+            font-size: 13px;
+            color: var(--muted);
+            display: block;
+            margin-bottom: 6px;
+        }
+        
+        input[type="number"], select, input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #e2e6ea;
+            background: #fff;
+            box-sizing: border-box;
+        }
+        
+        .row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        button {
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        
+        button.primary {
+            background: var(--accent);
+            color: #fff;
+            border-color: transparent;
+        }
+        
+        button:hover {
+            background: #f0f0f0;
+        }
+        
+        button.primary:hover {
+            background: #005a9e;
+        }
+        
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .canvas-wrap {
+            background: #fff;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: var(--shadow);
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+        }
+        
+        #drawCanvas {
+            border: 1px solid #e2e6ea;
+            border-radius: 6px;
+            background: white;
+            cursor: crosshair;
+        }
+        
+        .small {
+            font-size: 12px;
+            padding: 6px 8px;
+        }
+        
+        .status {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 8px;
+        }
+        
+        .flex-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .footer {
+            font-size: 12px;
+            color: var(--muted);
+            text-align: center;
+            margin-top: 8px;
+        }
+        
+        .controls-full {
+            grid-column: 1/-1;
+        }
+        
+        input[type="color"] {
+            padding: 0;
+            border: 0;
+            background: transparent;
+            height: 36px;
+            width: 48px;
+        }
+        
+        .brush-size-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        #brushSizeDisplay {
+            min-width: 40px;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel left">
+            <h1>普通画图</h1>
+            
+            <div class="controls">
+                <div>
+                    <label>画笔颜色</label>
+                    <div class="row">
+                        <input id="colorPicker" type="color" value="#000000">
+                        <input id="hexColor" type="text" value="#000000" style="flex:1">
+                    </div>
+                </div>
+                
+                <div>
+                    <label>画笔大小</label>
+                    <div class="brush-size-container">
+                        <input id="brushSize" type="range" min="1" max="50" value="5">
+                        <span id="brushSizeDisplay">5px</span>
+                    </div>
+                </div>
+                
+                <div>
+                    <label>工具</label>
+                    <select id="tool">
+                        <option value="brush">画笔</option>
+                        <option value="eraser">橡皮</option>
+                        <option value="line">直线</option>
+                        <option value="rectangle">矩形</option>
+                        <option value="circle">圆形</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label>背景颜色</label>
+                    <input id="bgColor" type="color" value="#ffffff">
+                </div>
+                
+                <div>
+                    <label>操作</label>
+                    <div class="toolbar">
+                        <button id="clearBtn" class="small">清空画布</button>
+                        <button id="saveBtn" class="small primary">保存图片</button>
+                        <button id="backBtn" class="small">返回首页</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="status">当前: <span id="status">就绪</span></div>
+        </div>
+        
+        <div class="panel right">
+            <h1>画布</h1>
+            <div class="canvas-wrap" id="canvasWrap">
+                <canvas id="drawCanvas" width="800" height="600"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        (function() {
+            // DOM元素获取
+            const colorPicker = document.getElementById('colorPicker');
+            const hexColor = document.getElementById('hexColor');
+            const brushSize = document.getElementById('brushSize');
+            const brushSizeDisplay = document.getElementById('brushSizeDisplay');
+            const toolSelect = document.getElementById('tool');
+            const bgColor = document.getElementById('bgColor');
+            const clearBtn = document.getElementById('clearBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const backBtn = document.getElementById('backBtn');
+            const status = document.getElementById('status');
+            const canvas = document.getElementById('drawCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 状态变量
+            let isDrawing = false;
+            let startX = 0;
+            let startY = 0;
+            let currentColor = '#000000';
+            let currentBrushSize = 5;
+            let currentTool = 'brush';
+            let tempCanvas = document.createElement('canvas');
+            let tempCtx = tempCanvas.getContext('2d');
+            
+            // 初始化画布
+            function initCanvas() {
+                canvas.width = 800;
+                canvas.height = 600;
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                
+                // 设置画布背景
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 设置初始绘图样式
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.lineWidth = currentBrushSize;
+                ctx.strokeStyle = currentColor;
+            }
+            
+            // 更新画笔大小显示
+            function updateBrushSizeDisplay() {
+                currentBrushSize = parseInt(brushSize.value);
+                brushSizeDisplay.textContent = `${currentBrushSize}px`;
+                ctx.lineWidth = currentBrushSize;
+            }
+            
+            // 更新颜色
+            function updateColor() {
+                currentColor = colorPicker.value;
+                hexColor.value = currentColor;
+                ctx.strokeStyle = currentColor;
+            }
+            
+            // 清空画布
+            function clearCanvas() {
+                if (confirm('确定要清空画布吗？')) {
+                    ctx.fillStyle = bgColor.value;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    status.textContent = '画布已清空';
+                }
+            }
+            
+            // 保存图片
+            function saveImage() {
+                const dataURL = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = dataURL;
+                a.download = `drawing_${Date.now()}.png`;
+                a.click();
+                status.textContent = '图片已保存';
+            }
+            
+            // 鼠标按下事件
+            canvas.addEventListener('mousedown', (e) => {
+                isDrawing = true;
+                const rect = canvas.getBoundingClientRect();
+                startX = e.clientX - rect.left;
+                startY = e.clientY - rect.top;
+                
+                // 开始绘图
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineWidth = currentBrushSize;
+                ctx.strokeStyle = currentColor;
+                
+                status.textContent = `正在绘制: ${Math.round(startX)},${Math.round(startY)}`;
+            });
+            
+            // 鼠标移动事件
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isDrawing) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const currentX = e.clientX - rect.left;
+                const currentY = e.clientY - rect.top;
+                
+                if (currentTool === 'brush') {
+                    // 画笔工具
+                    ctx.lineTo(currentX, currentY);
+                    ctx.stroke();
+                } else if (currentTool === 'eraser') {
+                    // 橡皮工具
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+                    ctx.beginPath();
+                    ctx.arc(currentX, currentY, currentBrushSize / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalCompositeOperation = 'source-over';
+                } else {
+                    // 其他工具（直线、矩形、圆形）
+                    // 保存当前画布到临时画布
+                    tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                    tempCtx.drawImage(canvas, 0, 0);
+                    
+                    // 重绘画布
+                    ctx.drawImage(tempCanvas, 0, 0);
+                    
+                    // 绘制临时图形
+                    if (currentTool === 'line') {
+                        // 直线
+                        ctx.beginPath();
+                        ctx.moveTo(startX, startY);
+                        ctx.lineTo(currentX, currentY);
+                        ctx.stroke();
+                    } else if (currentTool === 'rectangle') {
+                        // 矩形
+                        const width = currentX - startX;
+                        const height = currentY - startY;
+                        ctx.strokeRect(startX, startY, width, height);
+                    } else if (currentTool === 'circle') {
+                        // 圆形
+                        const radius = Math.sqrt(Math.pow(currentX - startX, 2) + Math.pow(currentY - startY, 2));
+                        ctx.beginPath();
+                        ctx.arc(startX, startY, radius, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                }
+            });
+            
+            // 鼠标抬起事件
+            canvas.addEventListener('mouseup', (e) => {
+                if (!isDrawing) return;
+                isDrawing = false;
+                status.textContent = '就绪';
+            });
+            
+            // 鼠标离开画布事件
+            canvas.addEventListener('mouseleave', () => {
+                isDrawing = false;
+            });
+            
+            // 事件监听器
+            colorPicker.addEventListener('input', updateColor);
+            hexColor.addEventListener('change', (e) => {
+                const v = e.target.value.trim();
+                if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)) {
+                    colorPicker.value = v;
+                    updateColor();
+                } else {
+                    alert('请输入有效的十六进制颜色（例如 #ff0000）');
+                    e.target.value = colorPicker.value;
+                }
+            });
+            
+            brushSize.addEventListener('input', updateBrushSizeDisplay);
+            
+            toolSelect.addEventListener('change', (e) => {
+                currentTool = e.target.value;
+            });
+            
+            bgColor.addEventListener('change', (e) => {
+                // 保存当前画布内容
+                tempCtx.drawImage(canvas, 0, 0);
+                
+                // 设置新背景
+                ctx.fillStyle = e.target.value;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 重新绘制内容
+                ctx.drawImage(tempCanvas, 0, 0);
+            });
+            
+            clearBtn.addEventListener('click', clearCanvas);
+            saveBtn.addEventListener('click', saveImage);
+            backBtn.addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+            
+            // 初始化
+            initCanvas();
+            updateBrushSizeDisplay();
+        })();
+    </script>
+</body>
+</html>
