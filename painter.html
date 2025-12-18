@@ -98,14 +98,10 @@
               <button id="clearBtn" class="small">清空</button>
               <button id="undoBtn" class="small">撤销</button>
               <button id="redoBtn" class="small">重做</button>
-              <button id="exportPng" class="small primary">导出 PNG</button>
-              <button id="saveLM" class="small">保存 LM</button>
+              <button id="saveLM" class="small primary">保存 LM</button>
               <button id="exportJson" class="small">导出 JSON</button>
               <button id="loadJsonBtn" class="small">加载 LM/JSON</button>
-              <label class="small" style="display:inline-block;">
-                <input id="importImg" class="file-input" type="file" accept="image/*">
-                加载 PNG
-              </label>
+              <button id="showPixelValues" class="small">查看像素值</button>
             </div>
         </div>
 
@@ -115,7 +111,6 @@
         </div>
       </div>
       <div class="status">当前: <span id="status">就绪</span></div>
-      <div class="footer">保存为 PNG 可获得放大的像素图。</div>
     </div>
 
     <div class="panel right">
@@ -142,11 +137,9 @@
   const clearBtn = document.getElementById('clearBtn');
   const undoBtn = document.getElementById('undoBtn');
   const redoBtn = document.getElementById('redoBtn');
-  const exportPngBtn = document.getElementById('exportPng');
   const saveLMBtn = document.getElementById('saveLM');
   const exportJsonBtn = document.getElementById('exportJson');
   const loadJsonBtn = document.getElementById('loadJsonBtn');
-  const importImgInput = document.getElementById('importImg');
   const statusEl = document.getElementById('status');
   const gridCanvas = document.getElementById('gridCanvas');
   const gridInfo = document.getElementById('gridInfo');
@@ -468,50 +461,6 @@
   undoBtn.addEventListener('click', ()=>undo());
   redoBtn.addEventListener('click', ()=>redo());
 
-  exportPngBtn.addEventListener('click', ()=>{
-    // create an offscreen canvas at native pixel size: width = cols, height = rows, scale up using nearest-neighbor for crispness
-    const out = document.createElement('canvas');
-    out.width = cols;
-    out.height = rows;
-    const outCtx = out.getContext('2d');
-    outCtx.imageSmoothingEnabled = false;
-    // fill transparent or white
-    if(bgAlpha === 'white'){
-      outCtx.fillStyle = '#ffffff';
-      outCtx.fillRect(0,0,out.width,out.height);
-    } else {
-      // leave transparent
-    }
-    for(let x=0;x<cols;x++){
-      for(let y=0;y<rows;y++){
-        const c = pixelData[x][y];
-        if(c){
-          outCtx.fillStyle = c;
-          outCtx.fillRect(x,y,1,1);
-        }
-      }
-    }
-    // upscale by cellSize (optional) - we will offer both small and upscaled download
-    const upscale = Math.max(1, parseInt(cellSizeInput.value,10) || cellSize);
-    const final = document.createElement('canvas');
-    final.width = out.width * upscale;
-    final.height = out.height * upscale;
-    const fctx = final.getContext('2d');
-    fctx.imageSmoothingEnabled = false;
-    if(bgAlpha === 'white'){
-      fctx.fillStyle = '#ffffff';
-      fctx.fillRect(0,0,final.width,final.height);
-    }
-    fctx.drawImage(out, 0, 0, final.width, final.height);
-    final.toBlob((blob)=>{
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `pixelart_${cols}x${rows}.png`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    });
-  });
-
   // 保存为LM格式
   saveLMBtn.addEventListener('click', ()=>{
     // 创建LM格式的数据结构
@@ -618,39 +567,298 @@
     input.click();
   });
 
-  importImgInput.addEventListener('change', (e)=>{
-    const f = e.target.files[0];
-    if(!f) return;
-    const img = new Image();
-    const url = URL.createObjectURL(f);
-    img.onload = ()=>{
-      // draw the image into a temporary canvas at size cols x rows to pixelate
-      const tmp = document.createElement('canvas');
-      tmp.width = cols; tmp.height = rows;
-      const tctx = tmp.getContext('2d');
-      tctx.drawImage(img, 0, 0, tmp.width, tmp.height);
-      const data = tctx.getImageData(0,0,tmp.width,tmp.height).data;
-      pushHistory();
-      for(let x=0;x<cols;x++){
-        for(let y=0;y<rows;y++){
-          const i = (y*cols + x) * 4;
-          const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
-          if(a === 0){
-            pixelData[x][y] = '';
-          } else {
-            pixelData[x][y] = rgbaToHex(r,g,b);
-          }
-        }
-      }
-      draw();
-      URL.revokeObjectURL(url);
-    };
-    img.src = url;
-  });
+
 
   function rgbaToHex(r,g,b){
     return '#' + [r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
   }
+
+  // 添加颜色转换函数
+  function hexStringToRgb(hex) {
+    // 移除#号
+    hex = hex.replace(/^#/, '');
+    
+    // 解析RGB值
+    let r, g, b;
+    if (hex.length === 3) {
+      // 简写形式：#RGB
+      r = parseInt(hex[0] + hex[0], 16);
+      g = parseInt(hex[1] + hex[1], 16);
+      b = parseInt(hex[2] + hex[2], 16);
+    } else {
+      // 完整形式：#RRGGBB
+      r = parseInt(hex.substring(0, 2), 16);
+      g = parseInt(hex.substring(2, 4), 16);
+      b = parseInt(hex.substring(4, 6), 16);
+    }
+    
+    return { r, g, b };
+  }
+
+  function rgbToHsv(r, g, b) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h, s, v = max;
+    
+    const d = max - min;
+    s = max === 0 ? 0 : d / max;
+    
+    if (max === min) {
+      h = 0; // achromatic
+    } else {
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+    
+    return {
+      h: Math.round(h * 360),
+      s: Math.round(s * 100),
+      v: Math.round(v * 100)
+    };
+  }
+
+  // 添加像素值显示功能
+  function showPixelValues() {
+    // 创建弹窗显示带像素值的图像
+    const modal = document.createElement('div');
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.background = 'rgba(0, 0, 0, 0.5)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.zIndex = '1000';
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.background = '#fff';
+    modalContent.style.borderRadius = '12px';
+    modalContent.style.padding = '20px';
+    modalContent.style.width = '90%';
+    modalContent.style.maxWidth = '1000px';
+    modalContent.style.maxHeight = '90%';
+    modalContent.style.overflow = 'auto';
+    
+    const title = document.createElement('h3');
+    title.textContent = '像素值查看';
+    title.style.marginBottom = '15px';
+    title.style.textAlign = 'center';
+    modalContent.appendChild(title);
+    
+    // 创建信息容器，显示当前选中像素的详细信息
+    const infoContainer = document.createElement('div');
+    infoContainer.style.display = 'flex';
+    infoContainer.style.justifyContent = 'space-between';
+    infoContainer.style.alignItems = 'center';
+    infoContainer.style.marginBottom = '15px';
+    infoContainer.style.padding = '10px';
+    infoContainer.style.backgroundColor = '#f5f5f5';
+    infoContainer.style.borderRadius = '8px';
+    infoContainer.style.fontSize = '14px';
+    
+    const pixelInfo = document.createElement('div');
+    pixelInfo.textContent = '将鼠标悬停在像素上查看详细信息';
+    pixelInfo.style.fontWeight = 'bold';
+    pixelInfo.style.color = '#333';
+    
+    const zoomInfo = document.createElement('div');
+    zoomInfo.textContent = '缩放: 50%';
+    zoomInfo.style.color = '#666';
+    
+    infoContainer.appendChild(pixelInfo);
+    infoContainer.appendChild(zoomInfo);
+    modalContent.appendChild(infoContainer);
+    
+    // 创建画布容器，包含图像和缩放控制
+    const canvasContainer = document.createElement('div');
+    canvasContainer.style.display = 'flex';
+    canvasContainer.style.justifyContent = 'center';
+    canvasContainer.style.alignItems = 'center';
+    canvasContainer.style.marginBottom = '15px';
+    canvasContainer.style.padding = '10px';
+    canvasContainer.style.backgroundColor = '#f5f5f5';
+    canvasContainer.style.borderRadius = '8px';
+    
+    const pixelCanvas = document.createElement('canvas');
+    // 计算合适的显示尺寸，确保像素清晰可见
+    const baseScale = 1; // 基础放大倍数，1对应50%缩放
+    let currentScale = baseScale;
+    pixelCanvas.width = cols * cellSize * currentScale;
+    pixelCanvas.height = rows * cellSize * currentScale;
+    pixelCanvas.style.imageRendering = 'pixelated';
+    pixelCanvas.style.border = '1px solid rgba(0, 0, 0, 0.1)';
+    pixelCanvas.style.borderRadius = '4px';
+    pixelCanvas.style.cursor = 'crosshair';
+    
+    const ctx = pixelCanvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    
+    // 绘制函数
+    function drawCanvas() {
+      // 清空画布
+      ctx.clearRect(0, 0, pixelCanvas.width, pixelCanvas.height);
+      
+      // 绘制背景
+      ctx.fillStyle = bgAlpha === 'white' ? '#ffffff' : '#f0f0f0';
+      ctx.fillRect(0, 0, pixelCanvas.width, pixelCanvas.height);
+      
+      // 绘制像素
+      for(let x=0; x<cols; x++) {
+        for(let y=0; y<rows; y++) {
+          const color = pixelData[x][y] || '#ffffff';
+          ctx.fillStyle = color;
+          ctx.fillRect(
+            x * cellSize * currentScale,
+            y * cellSize * currentScale,
+            cellSize * currentScale,
+            cellSize * currentScale
+          );
+        }
+      }
+      
+      // 绘制网格线
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for(let x=0; x<=cols; x++) {
+        ctx.moveTo(x * cellSize * currentScale, 0);
+        ctx.lineTo(x * cellSize * currentScale, pixelCanvas.height);
+      }
+      for(let y=0; y<=rows; y++) {
+        ctx.moveTo(0, y * cellSize * currentScale);
+        ctx.lineTo(pixelCanvas.width, y * cellSize * currentScale);
+      }
+      ctx.stroke();
+    }
+    
+    // 初始绘制
+    drawCanvas();
+    
+    // 添加鼠标悬停事件，显示当前像素的详细信息
+    pixelCanvas.addEventListener('mousemove', (e) => {
+      const rect = pixelCanvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) / (cellSize * currentScale));
+      const y = Math.floor((e.clientY - rect.top) / (cellSize * currentScale));
+      
+      // 检查坐标是否在画布范围内
+      if(x >= 0 && x < cols && y >= 0 && y < rows) {
+        const color = pixelData[x][y] || '#ffffff';
+        const { r, g, b } = hexStringToRgb(color);
+        const { h, s, v } = rgbToHsv(r, g, b);
+        
+        // 更新信息显示
+        pixelInfo.innerHTML = `坐标: (${x}, ${y}) | 颜色: ${color} | RGB: (${r}, ${g}, ${b}) | HSV: (${h}°, ${s}%, ${v}%)`;
+        
+        // 重绘画布，突出显示当前像素
+        drawCanvas();
+        
+        // 绘制选中框
+        ctx.strokeStyle = '#667eea';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(
+          x * cellSize * currentScale,
+          y * cellSize * currentScale,
+          cellSize * currentScale,
+          cellSize * currentScale
+        );
+      } else {
+        // 重置信息显示
+        pixelInfo.textContent = '将鼠标悬停在像素上查看详细信息';
+        drawCanvas();
+      }
+    });
+    
+    // 添加鼠标离开事件，重置显示
+    pixelCanvas.addEventListener('mouseleave', () => {
+      pixelInfo.textContent = '将鼠标悬停在像素上查看详细信息';
+      drawCanvas();
+    });
+    
+    canvasContainer.appendChild(pixelCanvas);
+    modalContent.appendChild(canvasContainer);
+    
+    // 添加缩放控制
+    const zoomControls = document.createElement('div');
+    zoomControls.style.display = 'flex';
+    zoomControls.style.justifyContent = 'center';
+    zoomControls.style.alignItems = 'center';
+    zoomControls.style.marginBottom = '15px';
+    zoomControls.style.gap = '10px';
+    
+    const zoomOutBtn = document.createElement('button');
+    zoomOutBtn.textContent = '-';
+    zoomOutBtn.style.padding = '8px 16px';
+    zoomOutBtn.style.backgroundColor = '#667eea';
+    zoomOutBtn.style.color = '#fff';
+    zoomOutBtn.style.border = 'none';
+    zoomOutBtn.style.borderRadius = '8px';
+    zoomOutBtn.style.cursor = 'pointer';
+    zoomOutBtn.addEventListener('click', () => {
+      if(currentScale > 1) {
+        currentScale--;
+        pixelCanvas.width = cols * cellSize * currentScale;
+        pixelCanvas.height = rows * cellSize * currentScale;
+        zoomInfo.textContent = `缩放: ${currentScale * 50}%`;
+        drawCanvas();
+      }
+    });
+    
+    const zoomInBtn = document.createElement('button');
+    zoomInBtn.textContent = '+';
+    zoomInBtn.style.padding = '8px 16px';
+    zoomInBtn.style.backgroundColor = '#667eea';
+    zoomInBtn.style.color = '#fff';
+    zoomInBtn.style.border = 'none';
+    zoomInBtn.style.borderRadius = '8px';
+    zoomInBtn.style.cursor = 'pointer';
+    zoomInBtn.addEventListener('click', () => {
+      if(currentScale < 5) {
+        currentScale++;
+        pixelCanvas.width = cols * cellSize * currentScale;
+        pixelCanvas.height = rows * cellSize * currentScale;
+        zoomInfo.textContent = `缩放: ${currentScale * 50}%`;
+        drawCanvas();
+      }
+    });
+    
+    zoomControls.appendChild(zoomOutBtn);
+    zoomControls.appendChild(zoomInfo);
+    zoomControls.appendChild(zoomInBtn);
+    modalContent.appendChild(zoomControls);
+    
+    // 添加关闭按钮
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '关闭';
+    closeBtn.style.display = 'block';
+    closeBtn.style.margin = '15px auto 0';
+    closeBtn.style.padding = '8px 16px';
+    closeBtn.style.backgroundColor = '#667eea';
+    closeBtn.style.color = '#fff';
+    closeBtn.style.border = 'none';
+    closeBtn.style.borderRadius = '8px';
+    closeBtn.style.cursor = 'pointer';
+    closeBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    modalContent.appendChild(closeBtn);
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+  }
+
+  // 为查看像素值按钮添加事件监听器
+  const showPixelValuesBtn = document.getElementById('showPixelValues');
+  showPixelValuesBtn.addEventListener('click', showPixelValues);
 
   // keyboard shortcuts
   window.addEventListener('keydown', (e)=>{
