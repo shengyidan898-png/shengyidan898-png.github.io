@@ -1,0 +1,1 @@
+const fs = require('fs'); const content = fs.readFileSync('painter.html', 'utf8'); const jsMatch = content.match(/<script>([\\s\\S]*?)<\/script>/); if (jsMatch) { const jsCode = jsMatch[1]; console.log(jsCode.substring(0, 1000)); }
